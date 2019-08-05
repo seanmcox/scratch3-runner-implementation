@@ -37,7 +37,9 @@ public class ScriptCollection {
 				continue;
 			String opcode = block.getOpcode();
 			Opcode opcodeImplementation = runtime.getFeatureSet().getOpcode(opcode);
-			if((opcodeImplementation != null)&&(opcodeImplementation instanceof OpcodeHat)) {
+			if(opcodeImplementation==null)
+				throw new InvalidScriptDefinitionException("Unimplemented opcode: "+opcode);
+			if(opcodeImplementation instanceof OpcodeHat) {
 				ScriptImplementation script = new ScriptImplementation(context, blocks, key, runtime);
 				scripts.add(script);
 			}
