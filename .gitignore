@@ -1,5 +1,5 @@
 /bin/**
 **/.DS_Store
-/dist/install/scratchrunner.*.jar
+/dist/install/scratch3runner.*.jar
 /dist/install/image_viewer.jar
 /bin/
