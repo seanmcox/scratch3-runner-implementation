@@ -177,13 +177,15 @@ public class ScriptImplementation implements Script{
 						int index = jumpBlock.getIndex();
 						if(index<0)
 							index = 0;
-						if(jumpBlock.getIndex()>=resolvedControl.length)
+						if(index>=resolvedControl.length)
 							index = resolvedScript.size();
 						else
 							index = localJumpMap.get(0);
-						throw new InvalidScriptDefinitionException("OpcodeControl specified a jump to an unresolvable local index.");
+						jumpBlock.setIndex(index);
 					}
-					jumpBlock.setIndex(localJumpMap.get(jumpBlock.getIndex()));
+					else {
+						jumpBlock.setIndex(localJumpMap.get(jumpBlock.getIndex()));
+					}
 				}
 			}
 			else if(opcodeImplementation instanceof OpcodeHat) {
