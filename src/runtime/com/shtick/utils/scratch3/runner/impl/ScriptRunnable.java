@@ -162,96 +162,107 @@ public class ScriptRunnable implements Runnable {
 			while((callStack.size()>0)&&(!totalStop)) {
 				YieldingScript yieldingScript = callStack.peek();
 				while((yieldingScript.index<yieldingScript.blocks.length)&&(!stopProcedure)) {
-					Block tuple = yieldingScript.blocks[yieldingScript.index];
+					Block block = yieldingScript.blocks[yieldingScript.index];
 					if(yieldingScript.debugFlag)
-						System.out.println("Index: "+yieldingScript.index+"/"+yieldingScript.blocks.length+" - "+tuple.getOpcode());
-					if(tuple instanceof ControlBlock) {
-						if(tuple instanceof TestBlock) {
-							testResult = (Boolean)getValue(yieldingScript.context,((TestBlock) tuple).getTest(),yieldingScript.localVariables);
+						System.out.println("Index: "+yieldingScript.index+"/"+yieldingScript.blocks.length+" - "+block.getOpcode());
+					if(block instanceof ControlBlock) {
+						if(block instanceof TestBlock) {
+							testResult = (Boolean)getValue(yieldingScript.context,((TestBlock) block).getTest(),yieldingScript.localVariables);
 							yieldingScript.index++;
 							continue;
 						}
-						else if(tuple instanceof SetLocalVarBlock) {
-							yieldingScript.localVariables[((LocalVarBlock)tuple).getLocalVarIdentifier()] = ((SetLocalVarBlock)tuple).getValue();
+						else if(block instanceof SetLocalVarBlock) {
+							yieldingScript.localVariables[((LocalVarBlock)block).getLocalVarIdentifier()] = ((SetLocalVarBlock)block).getValue();
 							yieldingScript.index++;
 							continue;
 						}
-						else if(tuple instanceof ChangeLocalVarByBlock) {
-							long change = ((ChangeLocalVarByBlock)tuple).getValue();
-							yieldingScript.localVariables[((LocalVarBlock)tuple).getLocalVarIdentifier()] += change;
+						else if(block instanceof ChangeLocalVarByBlock) {
+							long change = ((ChangeLocalVarByBlock)block).getValue();
+							yieldingScript.localVariables[((LocalVarBlock)block).getLocalVarIdentifier()] += change;
 							yieldingScript.index++;
 							continue;
 						}
-						if(tuple instanceof BasicJumpBlock) {
-							if((!yieldingScript.isAtomic)&&(((JumpBlock)tuple).getIndex()<yieldingScript.index)) {
+						if(block instanceof BasicJumpBlock) {
+							if((!yieldingScript.isAtomic)&&(((JumpBlock)block).getIndex()<yieldingScript.index)) {
 								// If the new index is before the old index, then yield after updating the index, unless this function is atomic.
-								yieldingScript.index = ((JumpBlock)tuple).getIndex();
+								yieldingScript.index = ((JumpBlock)block).getIndex();
 								return;
 							}
-							yieldingScript.index = ((JumpBlock)tuple).getIndex();
+							yieldingScript.index = ((JumpBlock)block).getIndex();
 							continue;
 						}
-						else if(tuple instanceof TrueJumpBlock) {
+						else if(block instanceof TrueJumpBlock) {
 							if(testResult) {
-								if((!yieldingScript.isAtomic)&&(((JumpBlock)tuple).getIndex()<yieldingScript.index)) {
+								if((!yieldingScript.isAtomic)&&(((JumpBlock)block).getIndex()<yieldingScript.index)) {
 									// If the new index is before the old index, then yield after updating the index, unless this function is atomic.
-									yieldingScript.index = ((JumpBlock)tuple).getIndex();
+									yieldingScript.index = ((JumpBlock)block).getIndex();
 									return;
 								}
-								yieldingScript.index = ((JumpBlock)tuple).getIndex();
+								yieldingScript.index = ((JumpBlock)block).getIndex();
 								continue;
 							}
 						}
-						else if(tuple instanceof FalseJumpBlock) {
+						else if(block instanceof FalseJumpBlock) {
 							if(!testResult) {
-								if((!yieldingScript.isAtomic)&&(((JumpBlock)tuple).getIndex()<yieldingScript.index)) {
+								if((!yieldingScript.isAtomic)&&(((JumpBlock)block).getIndex()<yieldingScript.index)) {
 									// If the new index is before the old index, then yield after updating the index, unless this function is atomic.
-									yieldingScript.index = ((JumpBlock)tuple).getIndex();
+									yieldingScript.index = ((JumpBlock)block).getIndex();
 									return;
 								}
-								yieldingScript.index = ((JumpBlock)tuple).getIndex();
+								yieldingScript.index = ((JumpBlock)block).getIndex();
 								continue;
 							}
 						}
 						else {
-							throw new InvalidScriptDefinitionException("Unrecognized control block: "+tuple.getClass().getCanonicalName());
+							throw new InvalidScriptDefinitionException("Unrecognized control block: "+block.getClass().getCanonicalName());
 						}
 						yieldingScript.index++;
 						continue;
 					}
 					// TODO Move type/safety checking below to resolveScript. (Opcode value implementations will need to report a return type.)
 					//      The type checking at that point would be less comprehensive, probably, but this seems to be the direction I need to go to improve performance.
-					String opcode = tuple.getOpcode();
-					java.util.Map<String,Object> arguments = ((BlockImplementation)tuple).getArgMap();
+					String opcode = block.getOpcode();
+					java.util.Map<String,Object> arguments = ((BlockImplementation)block).getArgMap();
 					Opcode opcodeImplementation = runtime.getFeatureSet().getOpcode(opcode);
 					currentOpcode = opcodeImplementation;
 					java.util.Map<String,DataType> types = opcodeImplementation.getArgumentTypes();
-					java.util.Map<String,Object> executableArguments = new HashMap<>(Math.max(arguments.size(),types.size()));
-					for(String paramName:types.keySet()) {
-						Object executableArgument;
-						switch(types.get(paramName)) {
-						case BOOLEAN:
-							executableArgument = getValue(yieldingScript.context,arguments.get(paramName),yieldingScript.localVariables);
-							if(!(executableArgument instanceof Boolean))
-								throw new InvalidScriptDefinitionException("Non-tuple provided where tuple expected.");
-							break;
-						case NUMBER:
-							executableArgument = OpcodeUtils.getNumericValue(getValue(yieldingScript.context,arguments.get(paramName),yieldingScript.localVariables));
-							break;
-						case OBJECT:
-							executableArgument = getValue(yieldingScript.context,arguments.get(paramName),yieldingScript.localVariables);
-							if(!((executableArgument instanceof Boolean)||(executableArgument instanceof Number)||(executableArgument instanceof String)))
-								throw new InvalidScriptDefinitionException("Non-object provided where object expected.");
-							break;
-						case STRING:
+					java.util.Map<String,Object> executableArguments;
+					if(types == null) {
+						executableArguments = new HashMap<>(arguments.size());
+						for(String paramName:arguments.keySet()) {
+							Object executableArgument;
 							executableArgument = OpcodeUtils.getStringValue(getValue(yieldingScript.context,arguments.get(paramName),yieldingScript.localVariables));
-							break;
-						default:
-							throw new RuntimeException("Unhandled DataType, "+types.get(paramName).name()+", in method signature for opcode, "+opcode);
+							executableArguments.put(paramName, executableArgument);
 						}
-						executableArguments.put(paramName, executableArgument);
 					}
-					OpcodeSubaction subaction = ((OpcodeAction)opcodeImplementation).execute(runtime, scriptRunner, yieldingScript.context, executableArguments);
+					else {
+						executableArguments = new HashMap<>(Math.max(arguments.size(),types.size()));
+						for(String paramName:types.keySet()) {
+							Object executableArgument;
+							switch(types.get(paramName)) {
+							case BOOLEAN:
+								executableArgument = getValue(yieldingScript.context,arguments.get(paramName),yieldingScript.localVariables);
+								if(!(executableArgument instanceof Boolean))
+									throw new InvalidScriptDefinitionException("Non-tuple provided where tuple expected.");
+								break;
+							case NUMBER:
+								executableArgument = OpcodeUtils.getNumericValue(getValue(yieldingScript.context,arguments.get(paramName),yieldingScript.localVariables));
+								break;
+							case OBJECT:
+								executableArgument = getValue(yieldingScript.context,arguments.get(paramName),yieldingScript.localVariables);
+								if(!((executableArgument instanceof Boolean)||(executableArgument instanceof Number)||(executableArgument instanceof String)))
+									throw new InvalidScriptDefinitionException("Non-object provided where object expected.");
+								break;
+							case STRING:
+								executableArgument = OpcodeUtils.getStringValue(getValue(yieldingScript.context,arguments.get(paramName),yieldingScript.localVariables));
+								break;
+							default:
+								throw new RuntimeException("Unhandled DataType, "+types.get(paramName).name()+", in method signature for opcode, "+opcode);
+							}
+							executableArguments.put(paramName, executableArgument);
+						}
+					}
+					OpcodeSubaction subaction = ((OpcodeAction)opcodeImplementation).execute(runtime, scriptRunner, yieldingScript.context, executableArguments,block.getMutation());
 					yieldingScript.index++;
 					if(subaction!=null) {
 						switch(subaction.getType()) {

@@ -40,10 +40,7 @@ public class VariableImplementation implements Variable{
 		return displayText;
 	}
 	
-	/**
-	 * 
-	 * @param value
-	 */
+	@Override
 	public void setValue(Object value) {
 		this.value = value;
 	}
