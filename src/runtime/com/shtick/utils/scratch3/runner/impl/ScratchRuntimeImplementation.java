@@ -972,22 +972,22 @@ public class ScratchRuntimeImplementation extends ScratchRuntimeCommon {
 		Map<String,Object> broadcastsMap = target.containsKey("broadcasts")?(Map<String,Object>)target.get("broadcasts"):new HashMap<>();
 		Map<String,BroadcastImplementation> broadcasts = new HashMap<>(broadcastsMap.size());
 		for(String id:broadcastsMap.keySet()) {
-			BroadcastImplementation broadcastImplementation = new BroadcastImplementation(id, name);
+			BroadcastImplementation broadcastImplementation = new BroadcastImplementation(id, (String)broadcastsMap.get(id));
 			broadcasts.put(id, broadcastImplementation);
 			objectsByIdentifier.put(id, broadcastImplementation);
 		}
 		
 		Map<String,Object> listsMap = target.containsKey("lists")?(Map<String,Object>)target.get("lists"):new HashMap<>();
-		Map<String,ListImplementation> lists = new HashMap<>(listsMap.size());
+		Map<String,ListImplementation> listsByName = new HashMap<>(listsMap.size());
 		for(String id:listsMap.keySet()) {
 			ListImplementation listImplementation = parseList(listsMap.get(id));
-			lists.put(id, listImplementation);
+			listsByName.put(listImplementation.getListName(), listImplementation);
 			objectsByIdentifier.put(id, listImplementation);
 		}
 		
 		try {
 			return new TargetImplementation(
-					isStage, name, variables, lists, broadcasts,
+					isStage, name, variables, listsByName, broadcasts,
 					blocks, null, currentCostume, costumes.toArray(new CostumeImplementation[costumes.size()]), sounds.toArray(new SoundImplementation[sounds.size()]), volume,
 					layerOrder, tempo, videoTransparency, videoState, textToSpeechLanguage,
 					visible, x, y, size, direction, draggable, rotationStyle, this);

@@ -54,11 +54,12 @@ public class ScriptImplementation implements Script{
 		else {
 			registerArgs = new HashMap<>(registerArgs);
 		}
-		evaluateHeadArgs(registerArgs,context,blocks,runtime);
+		evaluateHeadArgs(registerArgs,context,headOpcode,blocks,runtime);
 		((OpcodeHat)headOpcode).registerListeningScript(this, registerArgs, this.cloneableData.head.getMutation());
 	}
 	
-	private static void evaluateHeadArgs(Map<String,Object> args, ScriptContext context, Map<String, BlockImplementation> blocks, ScratchRuntimeImplementation runtime) {
+	private static void evaluateHeadArgs(Map<String,Object> args, ScriptContext context, Opcode opcode, Map<String, BlockImplementation> blocks, ScratchRuntimeImplementation runtime) {
+		Map<String,DataType> argumentTypes = opcode.getArgumentTypes();
 		for(String key:args.keySet()) {
 			Object value = args.get(key);
 			if(value instanceof TypedValueImplementation) {
@@ -71,8 +72,24 @@ public class ScriptImplementation implements Script{
 				else {
 					arguments = new HashMap<>(arguments);
 				}
-				evaluateHeadArgs(arguments,context,blocks,runtime);
+				evaluateHeadArgs(arguments,context,valueOpcode,blocks,runtime);
 				args.put(key, valueOpcode.execute(runtime, null, context, arguments, valueBlock.getMutation()));
+			}
+			else {
+				switch(argumentTypes.get(key)){
+				case POINTER_BROADCAST:
+					value = context.getContextBroadcastByName((String)value);
+					break;
+				case POINTER_LIST:
+					value = context.getContextListByName((String)value);
+					break;
+				case POINTER_VARIABLE:
+					value = context.getContextVariableByName((String)value);
+					break;
+				default:
+					break;
+				}
+				args.put(key, value);
 			}
 		}
 	}

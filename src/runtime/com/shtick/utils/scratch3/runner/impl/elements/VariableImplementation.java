@@ -8,24 +8,25 @@ import com.shtick.utils.scratch3.runner.core.elements.Variable;
  *
  */
 public class VariableImplementation implements Variable{
+	private String id;
 	private String name;
-	private String displayText;
 	private Object value;
 	
 	/**
-	 * @param name
+	 * @param id
 	 * @param value
-	 * @param displayText 
+	 * @param name 
 	 */
-	public VariableImplementation(String name, Object value, String displayText) {
+	public VariableImplementation(String id, Object value, String name) {
 		super();
-		this.name = name;
+		this.id = id;
 		this.value = value;
+		this.name = name;
 	}
 
 	@Override
-	public String getName() {
-		return name;
+	public String getID() {
+		return id;
 	}
 
 	@Override
@@ -36,8 +37,8 @@ public class VariableImplementation implements Variable{
 	/**
 	 * @return the displayText
 	 */
-	public String getDisplayText() {
-		return displayText;
+	public String getName() {
+		return name;
 	}
 	
 	@Override

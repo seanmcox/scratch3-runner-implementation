@@ -84,7 +84,7 @@ public class TargetImplementation implements Target{
 	 * @param isStage
 	 * @param name
 	 * @param variables
-	 * @param lists
+	 * @param listsByName
 	 * @param broadcastsByIDs
 	 * @param blocks
 	 * @param comments
@@ -107,7 +107,7 @@ public class TargetImplementation implements Target{
 	 * @param runtime
 	 * @throws InvalidScriptDefinitionException 
 	 */
-	public TargetImplementation(boolean isStage, String name, java.util.List<VariableImplementation> variables, Map<String,ListImplementation> lists, Map<String,BroadcastImplementation> broadcastsByIDs,
+	public TargetImplementation(boolean isStage, String name, java.util.List<VariableImplementation> variables, Map<String,ListImplementation> listsByName, Map<String,BroadcastImplementation> broadcastsByIDs,
 			Map<String, BlockImplementation> blocks, Object comments, long currentCostume, CostumeImplementation[] costumes, SoundImplementation[] sounds, double volume,
 			long layerOrder, long tempo, long videoTransparency, String videoState, String textToSpeechLanguage,
 			boolean visible, double x, double y, double size, double direction, boolean draggable, String rotationStyle, ScratchRuntimeImplementation runtime) throws InvalidScriptDefinitionException{
@@ -121,7 +121,7 @@ public class TargetImplementation implements Target{
 			for(VariableImplementation variable:variables)
 				variablesByName.put(variable.getName(), variable);
 		}
-		this.listsByName = lists;
+		this.listsByName = listsByName;
 		this.broadcastsByIDs = broadcastsByIDs;
 		this.broadcastsByName = new HashMap<>(broadcastsByIDs.size());
 		for(BroadcastImplementation broadcast:broadcastsByIDs.values())
@@ -253,7 +253,11 @@ public class TargetImplementation implements Target{
 	 */
 	@Override
 	public List getContextListByName(String name) {
-		return listsByName.get(name);
+		if(listsByName.containsKey(name))
+			return listsByName.get(name);
+		if(isStage)
+			return null;
+		return runtime.getCurrentStage().getContextListByName(name);
 	}
 
 
@@ -788,7 +792,7 @@ public class TargetImplementation implements Target{
 			synchronized(this.listsByName) {
 				ArrayList<VariableImplementation> variables = new ArrayList<>(variablesByName.size());
 				for(VariableImplementation variable:variablesByName.values())
-					variables.add(new VariableImplementation(variable.getName(), variable.getValue(),variable.getDisplayText()));
+					variables.add(new VariableImplementation(variable.getID(), variable.getValue(),variable.getName()));
 	
 				HashMap<String, ListImplementation> listsByName = new HashMap<>(this.listsByName.size());
 				for(String name:this.listsByName.keySet()) {

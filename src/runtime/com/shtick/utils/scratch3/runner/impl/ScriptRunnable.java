@@ -250,14 +250,47 @@ public class ScriptRunnable implements Runnable {
 								break;
 							case OBJECT:
 								executableArgument = getValue(yieldingScript.context,arguments.get(paramName),yieldingScript.localVariables);
-								if(!((executableArgument instanceof Boolean)||(executableArgument instanceof Number)||(executableArgument instanceof String)))
-									throw new InvalidScriptDefinitionException("Non-object provided where object expected.");
+								if(!((executableArgument instanceof Boolean)||(executableArgument instanceof Number)||(executableArgument instanceof String)||(executableArgument instanceof List)))
+									throw new InvalidScriptDefinitionException("Non-object provided where object expected: "+executableArgument+" ("+opcode+","+paramName+")");
 								break;
 							case STRING:
 								executableArgument = OpcodeUtils.getStringValue(getValue(yieldingScript.context,arguments.get(paramName),yieldingScript.localVariables));
 								break;
+							case POINTER_BROADCAST:{
+								Object value = arguments.get(paramName);
+								if(value instanceof String) {
+									value = scriptTuple.getContext().getContextBroadcastByName((String)value);
+								}
+								if(!(value instanceof Broadcast)) {
+									throw new InvalidScriptDefinitionException("Non-broadcast type evaluated for POINTER_BROADCAST parameter: "+value);
+								}
+								executableArgument = value;
+								break;
+							}
+							case POINTER_LIST:{
+								Object value = arguments.get(paramName);
+								if(value instanceof String) {
+									value = scriptTuple.getContext().getContextListByName((String)value);
+								}
+								if(!(value instanceof List)) {
+									throw new InvalidScriptDefinitionException("Non-list type evaluated for POINTER_LIST parameter: "+value);
+								}
+								executableArgument = value;
+								break;
+							}
+							case POINTER_VARIABLE:{
+								Object value = arguments.get(paramName);
+								if(value instanceof String) {
+									value = scriptTuple.getContext().getContextVariableByName((String)value);
+								}
+								if(!(value instanceof Variable)) {
+									throw new InvalidScriptDefinitionException("Non-variable type evaluated for POINTER_VARIABLE parameter: "+value);
+								}
+								executableArgument = value;
+								break;
+							}
 							default:
-								throw new RuntimeException("Unhandled DataType, "+types.get(paramName).name()+", in method signature for opcode, "+opcode);
+								throw new InvalidScriptDefinitionException("Unhandled DataType, "+types.get(paramName).name()+", in method signature for opcode, "+opcode);
 							}
 							executableArguments.put(paramName, executableArgument);
 						}
@@ -317,23 +350,23 @@ public class ScriptRunnable implements Runnable {
 		return object;
 	}
 	
-	private Object getBlockTupleValue(ScriptContext context, Block tuple, long[] localVariables) throws InvalidScriptDefinitionException{
-		if(tuple instanceof ReadLocalVarBlock)
-			return localVariables[((ReadLocalVarBlock)tuple).getLocalVarIdentifier()];
-		java.util.Map<String,Object> arguments = ((BlockImplementation)tuple).getArgMap();
-		Opcode opcodeImplementation = getOpcode(tuple);
+	private Object getBlockTupleValue(ScriptContext context, Block block, long[] localVariables) throws InvalidScriptDefinitionException{
+		if(block instanceof ReadLocalVarBlock)
+			return localVariables[((ReadLocalVarBlock)block).getLocalVarIdentifier()];
+		java.util.Map<String,Object> arguments = ((BlockImplementation)block).getArgMap();
+		Opcode opcodeImplementation = getOpcode(block);
 		if(opcodeImplementation == null)
-			throw new InvalidScriptDefinitionException("Unrecognized value resolving opcode: "+tuple.getOpcode());
+			throw new InvalidScriptDefinitionException("Unrecognized value resolving opcode: "+block.getOpcode());
 		if(!(opcodeImplementation instanceof OpcodeValue))
-			throw new InvalidScriptDefinitionException("Attempted to evaluate non-value opcode: "+tuple.getOpcode());
+			throw new InvalidScriptDefinitionException("Attempted to evaluate non-value opcode: "+block.getOpcode());
 		java.util.Map<String,DataType> types = opcodeImplementation.getArgumentTypes();
 		if(types.size()!= arguments.size())
-			throw new InvalidScriptDefinitionException("Invalid arguments found for opcode, "+tuple.getOpcode());
+			throw new InvalidScriptDefinitionException("Invalid arguments found for opcode, "+block.getOpcode());
 		java.util.Map<String,Object> executableArguments = new HashMap<>(arguments.size());
 		for(String paramName:types.keySet()) {
 			DataType type = types.get(paramName);
 			if(type == null)
-				throw new InvalidScriptDefinitionException("Invalid argument, "+paramName+", found for opcode, "+tuple.getOpcode());
+				throw new InvalidScriptDefinitionException("Invalid argument, "+paramName+", found for opcode, "+block.getOpcode());
 			Object executableArgument;
 			if(type==Opcode.DataType.POINTER_META)
 				executableArgument = arguments.get(paramName);
@@ -386,7 +419,7 @@ public class ScriptRunnable implements Runnable {
 			}
 			executableArguments.put(paramName, executableArgument);
 		}
-		Object retval = ((OpcodeValue)opcodeImplementation).execute(runtime, scriptRunner, context, executableArguments, tuple.getMutation());
+		Object retval = ((OpcodeValue)opcodeImplementation).execute(runtime, scriptRunner, context, executableArguments, block.getMutation());
 		return retval;
 	}
 	
